@@ -15,3 +15,6 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 
 // :TODO: needed for the naive way we're mixing in the disque client.
 libraryDependencies += "net.debasishg" %% "redisclient" % "3.0"
+
+// Library for parsing json.
+libraryDependencies += "org.json4s" %% "json4s-native" % "3.2.11"
