@@ -1,0 +1,4 @@
+disque:
+  image: disque
+  ports:
+    - "7711:7711"
