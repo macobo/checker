@@ -24,7 +24,10 @@ class QueueCommunicator(
     case CheckQueue(target) => {
       log.debug(s"Checking queues for new messages. queues=${queues}, targetActor=${target.path}")
       client.getJobMulti(queues, Some(10)) match {
-        case Some(job: Job[String]) => target ! job
+        case Some(job: Job[String]) => {
+          target ! job
+          client.acknowledge(job.id)
+        }
         case None => {}
       }
     }

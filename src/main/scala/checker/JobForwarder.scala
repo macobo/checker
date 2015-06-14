@@ -6,17 +6,25 @@ import org.json4s.DefaultFormats
 import org.json4s.native.JsonMethods
 
 case class Check(project: String, name: String)
+case class Host(id: String, knownChecks: Seq[Check])
 
-sealed trait QueueMessage {
+trait Timestamped {
+  def t: Option[Long]
+  val timestamp = t getOrElse System.currentTimeMillis()
+}
+
+sealed trait QueueMessage extends Timestamped {
   def messageType: String
 }
-case class ClusterJoin(hostId: String, knownChecks: Seq[Check]) extends QueueMessage {
+
+case class ClusterJoin(hostId: String, knownChecks: Seq[Check], t: Option[Long] = None) extends QueueMessage {
   val messageType = "CLUSTERJOIN"
+  lazy val host = Host(hostId, knownChecks)
 }
-case class Heartbeat(hostId: String) extends QueueMessage {
+case class Heartbeat(hostId: String, t: Option[Long] = None) extends QueueMessage {
   val messageType = "HEARTBEAT"
 }
-case class CheckResult() extends QueueMessage {
+case class CheckResult(t: Option[Long] = None) extends QueueMessage {
   val messageType = "CHECKRESULT"
 }
 
@@ -27,7 +35,7 @@ class JobForwarder extends Actor with ActorLogging {
   private case class Message(messageType: String)
 
   def resultManager = context.actorSelection("../result_manager")
-  def clusterManager = context.actorSelection("../cluster_manager") 
+  def clusterManager = context.actorSelection("../cluster_manager")
 
   def parseMessage(message: String): QueueMessage = {
     val parsed = JsonMethods.parse(message)
@@ -40,7 +48,9 @@ class JobForwarder extends Actor with ActorLogging {
   }
 
   def processQueueMessage(message: String, id: JobId, sourceQueue: Option[String]) = {
-    parseMessage(message) match {
+    val parsed = parseMessage(message)
+    log.debug(s"Forwarding message. parsed=${parsed}")
+    parsed match {
       case r: CheckResult => resultManager ! r
       case hb: Heartbeat  => clusterManager ! hb
       case m: ClusterJoin => clusterManager ! m
