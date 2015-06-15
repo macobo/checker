@@ -1,6 +1,6 @@
 package checker
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ActorRef, Actor, ActorLogging}
 import macobo.disque.commands.{Job, JobId}
 import org.json4s.{FieldSerializer, DefaultFormats}
 import org.json4s.FieldSerializer._
@@ -51,10 +51,7 @@ object JobParser {
 }
 
 // This Actor unpacks messages from their stringified messages and forwards them to appropriate actors
-class JobForwarder extends Actor with ActorLogging {
-  def resultManager = context.actorSelection("./result_manager")
-  def clusterManager = context.actorSelection("./cluster_manager")
-
+class JobForwarder(resultManager: ActorRef, clusterManager: ActorRef) extends Actor with ActorLogging {
   def processQueueMessage(message: String, id: JobId, sourceQueue: Option[String]) = {
     val parsed = JobParser.parseMessage(message)
     log.debug(s"Forwarding message. parsed=${parsed}")

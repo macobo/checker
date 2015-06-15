@@ -1,8 +1,8 @@
 package checker
 
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
-import org.json4s.DefaultFormats
+import akka.actor.{Actor, ActorSystem}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import macobo.disque.commands.{Job, JobId}
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 class MyActor extends Actor {
@@ -21,14 +21,10 @@ class JobForwarderSpec
     JobParser.parseMessage(string)
 
   "JobForwarder" should {
-    val forwarder = TestActorRef[JobForwarder]
-    val clusterManagerSibling = TestActorRef(Props(new MyActor()), "cluster_manager")
-    val resultManagerSibling = TestActorRef(Props(new MyActor()), "result_manager")
+    val heartbeat = Heartbeat("foo.bar.zoo")
+    val heartbeatMsg = """{"hostId":"foo.bar.zoo","messageType":"HEARTBEAT"}"""
 
     "input message" should {
-      val heartbeat = Heartbeat("foo.bar.zoo")
-      val heartbeatMsg = """{"hostId":"foo.bar.zoo","messageType":"HEARTBEAT"}"""
-
       "deserializing" should {
         "for HeartBeat" in {
           parse(heartbeatMsg) must equal(heartbeat)
@@ -38,6 +34,17 @@ class JobForwarderSpec
         "for HeartBeat" in {
           JobParser.jsonify(heartbeat) must equal(heartbeatMsg)
         }
+      }
+    }
+
+    "message forwarding" should {
+      val resultManagerSibling = TestProbe()
+      val clusterManagerSibling = TestProbe()
+      val forwarder = TestActorRef(new JobForwarder(resultManagerSibling.ref, clusterManagerSibling.ref))
+
+      "forwarding a heartbeat" in {
+        forwarder ! Job(heartbeatMsg, JobId(""), None)
+        clusterManagerSibling.expectMsg(heartbeat)
       }
     }
   }
