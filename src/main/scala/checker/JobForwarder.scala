@@ -2,12 +2,28 @@ package checker
 
 import akka.actor.{ActorRef, Actor, ActorLogging}
 import macobo.disque.commands.{Job, JobId}
-import org.json4s.{FieldSerializer, DefaultFormats}
+import org.json4s.JsonAST.{JString, JBool, JField, JObject}
+import org.json4s.{CustomSerializer, FieldSerializer, DefaultFormats}
 import org.json4s.FieldSerializer._
 import org.json4s.native.{Serialization, JsonMethods}
 
+import scala.concurrent.duration.Duration
+
 case class Check(project: String, name: String)
-case class Host(id: String, knownChecks: Seq[Check])
+case class CheckListing(
+  check: Check,
+  runsEvery: Duration,
+  timelimit: Duration
+)
+
+case class Host(id: String, knownChecks: Seq[CheckListing])
+
+sealed trait CheckResultType {
+  def success: Boolean
+}
+case class CheckSuccess() extends CheckResultType               { val success = true }
+case class CheckFailure(reason: String) extends CheckResultType { val success = false }
+
 
 trait Timestamped {
   def t: Option[Long]
@@ -18,20 +34,42 @@ sealed trait QueueMessage extends Timestamped {
   def messageType: String
 }
 
-case class ClusterJoin(hostId: String, knownChecks: Seq[Check], t: Option[Long] = None) extends QueueMessage {
+case class ClusterJoin(hostId: String, knownChecks: Seq[CheckListing], t: Option[Long] = None) extends QueueMessage {
   val messageType = "CLUSTERJOIN"
   lazy val host = Host(hostId, knownChecks)
 }
 case class Heartbeat(hostId: String, t: Option[Long] = None) extends QueueMessage {
   val messageType = "HEARTBEAT"
 }
-case class CheckResult(t: Option[Long] = None) extends QueueMessage {
+case class CheckResultMessage(
+  check: Check,
+  result: CheckResultType,
+  log: String,
+  timeTaken: Int,
+  t: Option[Long] = None
+) extends QueueMessage {
   val messageType = "CHECKRESULT"
 }
 
 object JobParser {
   val fieldSerializer = FieldSerializer[QueueMessage](ignore("timestamp"))
-  implicit val formats = DefaultFormats + fieldSerializer
+
+  class ResultSerializer extends CustomSerializer[CheckResultType](format => ({
+    case JObject(JField("success", JBool(true)) :: Nil) => CheckSuccess()
+    case JObject(JField("success", JBool(false)) :: JField("reason", JString(reason)) :: Nil) =>
+      CheckFailure(reason)
+  }, {
+    case x: CheckResultType => {
+      var firstField = JField("success", JBool(x.success))
+      val rest = x match {
+        case CheckSuccess() => Nil
+        case CheckFailure(reason) => JField("reason", JString(reason)) :: Nil
+      }
+      JObject(firstField :: rest)
+    }
+  }))
+
+  implicit val formats = DefaultFormats + fieldSerializer + new ResultSerializer
 
   private case class Message(messageType: String)
 
@@ -39,7 +77,7 @@ object JobParser {
     val parsed = JsonMethods.parse(message)
     val msgFormat = parsed.extract[Message]
     msgFormat.messageType match {
-      case "CHECKRESULT" => parsed.extract[CheckResult]
+      case "CHECKRESULT" => parsed.extract[CheckResultMessage]
       case "HEARTBEAT" => parsed.extract[Heartbeat]
       case "CLUSTERJOIN" => parsed.extract[ClusterJoin]
     }
@@ -56,7 +94,7 @@ class JobForwarder(resultManager: ActorRef, clusterManager: ActorRef) extends Ac
     val parsed = JobParser.parseMessage(message)
     log.debug(s"Forwarding message. parsed=${parsed}")
     parsed match {
-      case r: CheckResult => resultManager ! r
+      case r: CheckResultMessage => resultManager ! r
       case hb: Heartbeat  => clusterManager ! hb
       case m: ClusterJoin => clusterManager ! m
     }
