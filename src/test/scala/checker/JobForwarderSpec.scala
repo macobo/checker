@@ -17,8 +17,6 @@ class JobForwarderSpec
   with WordSpecLike
   with MustMatchers
 {
-  implicit val formats = DefaultFormats
-
   def parse(string: String) =
     JobParser.parseMessage(string)
 
@@ -28,16 +26,17 @@ class JobForwarderSpec
     val resultManagerSibling = TestActorRef(Props(new MyActor()), "result_manager")
 
     "input message" should {
+      val heartbeat = Heartbeat("foo.bar.zoo")
+      val heartbeatMsg = """{"hostId":"foo.bar.zoo","messageType":"HEARTBEAT"}"""
+
       "deserializing" should {
         "for HeartBeat" in {
-          val message =
-            """
-              |{
-              |  "messageType": "HEARTBEAT",
-              |  "hostId": "foo.bar.zoo"
-              |}
-            """.stripMargin
-          parse(message) must equal(Heartbeat("foo.bar.zoo"))
+          parse(heartbeatMsg) must equal(heartbeat)
+        }
+      }
+      "serializing" should {
+        "for HeartBeat" in {
+          JobParser.jsonify(heartbeat) must equal(heartbeatMsg)
         }
       }
     }

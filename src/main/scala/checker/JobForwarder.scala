@@ -2,8 +2,9 @@ package checker
 
 import akka.actor.{Actor, ActorLogging}
 import macobo.disque.commands.{Job, JobId}
-import org.json4s.DefaultFormats
-import org.json4s.native.JsonMethods
+import org.json4s.{FieldSerializer, DefaultFormats}
+import org.json4s.FieldSerializer._
+import org.json4s.native.{Serialization, JsonMethods}
 
 case class Check(project: String, name: String)
 case class Host(id: String, knownChecks: Seq[Check])
@@ -29,7 +30,9 @@ case class CheckResult(t: Option[Long] = None) extends QueueMessage {
 }
 
 object JobParser {
-  implicit val formats = DefaultFormats
+  val fieldSerializer = FieldSerializer[QueueMessage](ignore("timestamp"))
+  implicit val formats = DefaultFormats + fieldSerializer
+
   private case class Message(messageType: String)
 
   def parseMessage(message: String): QueueMessage = {
@@ -40,6 +43,10 @@ object JobParser {
       case "HEARTBEAT" => parsed.extract[Heartbeat]
       case "CLUSTERJOIN" => parsed.extract[ClusterJoin]
     }
+  }
+
+  def jsonify(message: QueueMessage): String = {
+    Serialization.write(message)
   }
 }
 
