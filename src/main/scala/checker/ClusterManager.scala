@@ -1,6 +1,8 @@
 package checker
 
-import akka.actor.{ActorLogging, Actor}
+import akka.actor.{Actor, ActorLogging, ActorRef}
+import checker.JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
+
 import scala.concurrent.duration._
 
 case class UpdateCluster(t: Option[Long]) extends Timestamped
@@ -8,7 +10,7 @@ case class UpdateCluster(t: Option[Long]) extends Timestamped
 /* ClusterManager manages a fleet of check runners, checking their health and allowing new machines to join the fleet
  * dynamically.
  */
-class ClusterManager extends Actor with ActorLogging {
+class ClusterManager(jobManager: ActorRef) extends Actor with ActorLogging {
   val HEARTBEAT_FREQUENCY = 1.minutes
 
   var onlineHosts: Map[String, Host] = Map.empty
@@ -19,7 +21,7 @@ class ClusterManager extends Actor with ActorLogging {
 
   def receive = {
     case m: ClusterJoin => {
-      // :TODO: forward new jobs to JobManager
+      jobManager ! JobsAvailable(m.knownChecks)
       onlineHosts = onlineHosts.updated(m.hostId, m.host)
       lastSeen = lastSeen.updated(m.hostId, m.timestamp)
     }
@@ -28,12 +30,15 @@ class ClusterManager extends Actor with ActorLogging {
       lastSeen = lastSeen.updated(m.hostId, m.timestamp)
     }
     case m: UpdateCluster => {
-      // :TODO: let JobManager know jobs are unavailable
       val removedHosts = onlineHosts.keys
         .filterNot { isAliveAt(_, m.timestamp) }
         .toSet
 
       def filterFn(key: String): Boolean = !removedHosts.contains(key)
+
+      val removedChecks: Seq[CheckListing] = removedHosts.toSeq.flatMap { onlineHosts(_).knownChecks }
+      if (!removedChecks.isEmpty)
+        jobManager ! JobsUnavailable(removedChecks)
 
       onlineHosts = onlineHosts.filterKeys(filterFn)
       lastSeen = lastSeen.filterKeys(filterFn)

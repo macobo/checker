@@ -1,15 +1,9 @@
 package checker
 
-import akka.actor.{Actor, ActorSystem}
+import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import macobo.disque.commands.{Job, JobId}
 import org.scalatest.{MustMatchers, WordSpecLike}
-
-class MyActor extends Actor {
-  def receive = {
-    case _: QueueMessage => {}
-  }
-}
 
 class JobForwarderSpec
   extends TestKit(ActorSystem())
@@ -19,7 +13,6 @@ class JobForwarderSpec
 {
   def parse = JobParser.parseMessage _
   def jsonify = JobParser.jsonify _
-
   def job(x: String) = Job(x, JobId(""), None)
 
   "JobForwarder" should {

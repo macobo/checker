@@ -1,26 +1,16 @@
 package checker
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import akka.pattern.ask
-import akka.util.Timeout
-import checker.JobAvailabilityManager.{JobsAvailable, MakeAvailable}
-import macobo.disque.commands.JobId
+import akka.actor.{Actor, ActorLogging}
+import checker.JobAvailabilityManager.JobsAvailable
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-
-trait CheckJob {
-  def queueName: String
-  // Typically a combination of project-name
-  def identifier: String
-}
+import scala.concurrent.ExecutionContext
 
 object JobAvailabilityManager {
-  case class JobsAvailable(jobs: Seq[CheckJob])
-  case class JobsUnavailable(jobs: Seq[CheckJob])
+  case class JobsAvailable(jobs: Seq[CheckListing])
+  case class JobsUnavailable(jobs: Seq[CheckListing])
 
-  case class MakeAvailable(check: CheckJob)
-  case class DeleteCheck(check: CheckJob)
+  case class MakeAvailable(check: CheckListing)
+  case class DeleteCheck(check: CheckListing)
 }
 
 /**
@@ -30,16 +20,16 @@ object JobAvailabilityManager {
  *
  */
 class JobAvailabilityManager(implicit ec: ExecutionContext) extends Actor with ActorLogging {
-  var jobAvailability: Map[String, Int] = Map.empty
-  var jobs: Map[String, CheckJob] = Map.empty
+//  var jobAvailability: Map[String, Int] = Map.empty
+//  var jobs: Map[String, CheckListing] = Map.empty
 
-  def jobQueue: ActorRef = ???
+//  def jobQueue: ActorRef = ???
 
-  private def makeAvailable(check: CheckJob): Future[(String, JobId)] = {
-    implicit val timeout = Timeout(30.seconds)
-    val idFuture: Future[JobId] = (jobQueue ? MakeAvailable(check)).mapTo[JobId]
-    idFuture.map { (check.identifier, _) }
-  }
+//  private def makeAvailable(check: CheckJob): Future[(String, JobId)] = {
+//    implicit val timeout = Timeout(30.seconds)
+//    val idFuture: Future[JobId] = (jobQueue ? MakeAvailable(check)).mapTo[JobId]
+//    idFuture.map { (check.identifier, _) }
+//  }
 
   def receive = {
     case JobsAvailable(jobs) => {}
