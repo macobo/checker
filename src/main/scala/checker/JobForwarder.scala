@@ -28,14 +28,9 @@ case class CheckResult(t: Option[Long] = None) extends QueueMessage {
   val messageType = "CHECKRESULT"
 }
 
-// This Actor unpacks messages from their stringified messages and forwards them to appropriate actors
-class JobForwarder extends Actor with ActorLogging {
-
+object JobParser {
   implicit val formats = DefaultFormats
   private case class Message(messageType: String)
-
-  def resultManager = context.actorSelection("../result_manager")
-  def clusterManager = context.actorSelection("../cluster_manager")
 
   def parseMessage(message: String): QueueMessage = {
     val parsed = JsonMethods.parse(message)
@@ -46,9 +41,15 @@ class JobForwarder extends Actor with ActorLogging {
       case "CLUSTERJOIN" => parsed.extract[ClusterJoin]
     }
   }
+}
+
+// This Actor unpacks messages from their stringified messages and forwards them to appropriate actors
+class JobForwarder extends Actor with ActorLogging {
+  def resultManager = context.actorSelection("./result_manager")
+  def clusterManager = context.actorSelection("./cluster_manager")
 
   def processQueueMessage(message: String, id: JobId, sourceQueue: Option[String]) = {
-    val parsed = parseMessage(message)
+    val parsed = JobParser.parseMessage(message)
     log.debug(s"Forwarding message. parsed=${parsed}")
     parsed match {
       case r: CheckResult => resultManager ! r

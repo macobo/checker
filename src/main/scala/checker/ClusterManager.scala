@@ -5,6 +5,9 @@ import scala.concurrent.duration._
 
 case class UpdateCluster(t: Option[Long]) extends Timestamped
 
+/* ClusterManager manages a fleet of check runners, checking their health and allowing new machines to join the fleet
+ * dynamically.
+ */
 class ClusterManager extends Actor with ActorLogging {
   val HEARTBEAT_FREQUENCY = 1.minutes
 
