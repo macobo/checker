@@ -83,11 +83,6 @@ class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext
   def receive = {
     case JobsAvailable(checks) =>   updateAvailability(checks, +1)
     case JobsUnavailable(checks) => updateAvailability(checks, -1)
-    case GetState() => {
-      val set = availableChecks.keys.map { check =>
-        (check, availability(check))
-      }.toSet
-      sender() ! set
-    }
+    case GetState() => sender() ! availability.toSet
   }
 }
