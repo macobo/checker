@@ -85,5 +85,14 @@ class ClusterManagerSpec
       manager ! UpdateCluster(Some(170000))
       jobs.expectMsg(JobsUnavailable(Seq(c1, c2)))
     }
+
+    "let jobmanager update using heartbeats" in {
+      val (manager, jobs) = newManager
+      manager ! join(h1, 0)
+      manager ! join(h2, 50000)
+      manager ! Heartbeat(h1.id, Some(60000))
+
+      getHosts(manager) must equal(List((h2, 50000), (h1, 60000)))
+    }
   }
 }
