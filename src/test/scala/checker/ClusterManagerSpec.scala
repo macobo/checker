@@ -1,13 +1,14 @@
 package checker
 
-import akka.pattern.ask
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.{TestActorRef, TestProbe, ImplicitSender, TestKit}
+import akka.pattern.ask
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
+import checker.JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
 import org.scalatest.{MustMatchers, WordSpecLike}
 
-import scala.util.Success
 import scala.concurrent.duration._
+import scala.util.Success
 
 class ClusterManagerSpec
   extends TestKit(ActorSystem())
@@ -26,22 +27,63 @@ class ClusterManagerSpec
     state
   }
 
+  def getHosts(manager: ActorRef) =
+    getState(manager).hosts.sortBy { _._2 }
+
   def join(host: Host, t: Long) =
     ClusterJoin(host.id, host.knownChecks, Some(t))
 
-  val h1 = Host("h1", Seq(CheckListing(Check("tests", "h1"), 3.minutes, 2.minutes)))
-  val h2 = Host("h2", Seq(CheckListing(Check("tests", "h1"), 3.minutes, 2.minutes)))
-  val h3 = Host("h3", Seq(CheckListing(Check("tests", "h3"), 3.minutes, 2.minutes)))
+  val c1 = CheckListing(Check("tests", "t1"), 3.minutes, 2.minutes)
+  val c2 = CheckListing(Check("tests", "t2"), 3.minutes, 2.minutes)
+  val c3 = CheckListing(Check("tests", "t3"), 3.minutes, 2.minutes)
+  val h1 = Host("h1", Seq(c1, c2))
+  val h2 = Host("h2", Seq(c3))
+  val h3 = Host("h3", Seq(c1))
 
   "Cluster manager" should {
     "allow hosts to join the cluster" in {
       val (manager, _) = newManager
       manager ! join(h1, 0)
-      manager ! join(h2, 50)
-      manager ! join(h3, 160)
+      manager ! join(h2, 50000)
+      manager ! join(h3, 160000)
 
-      val hosts = getState(manager).hosts.sortBy { _._2 }
-      hosts must equal(List((h1, 0), (h2, 50), (h3, 160)))
+      getHosts(manager) must equal(List((h1, 0), (h2, 50000), (h3, 160000)))
+    }
+
+    "update hosts when they have timed out" in {
+      val (manager, _) = newManager
+      manager ! join(h1, 0)
+      manager ! join(h2, 50000)
+      manager ! join(h3, 160000)
+
+      manager ! UpdateCluster(Some(170000))
+      getHosts(manager) must equal(List((h2, 50000), (h3, 160000)))
+    }
+
+    "let jobmanager know of new jobs that are available" in {
+      val (manager, jobs) = newManager
+      manager ! join(h1, 0)
+      manager ! join(h2, 50000)
+      manager ! join(h3, 160000)
+
+      jobs.expectMsg(JobsAvailable(Seq(c1, c2)))
+      jobs.expectMsg(JobsAvailable(Seq(c3)))
+      jobs.expectMsg(JobsAvailable(Seq(c1)))
+    }
+
+    "let jobmanager know of jobs that are unavailable" in {
+      val (manager, jobs) = newManager
+      manager ! join(h1, 0)
+      manager ! join(h2, 50000)
+      manager ! join(h3, 160000)
+
+      // Found no good way of popping these messages. :(
+      jobs.expectMsg(JobsAvailable(Seq(c1, c2)))
+      jobs.expectMsg(JobsAvailable(Seq(c3)))
+      jobs.expectMsg(JobsAvailable(Seq(c1)))
+
+      manager ! UpdateCluster(Some(170000))
+      jobs.expectMsg(JobsUnavailable(Seq(c1, c2)))
     }
   }
 }
