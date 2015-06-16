@@ -4,6 +4,15 @@ version := "1.0"
 
 scalaVersion := "2.11.6"
 
+scalacOptions ++= Seq(
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Ywarn-dead-code",
+  "-Ywarn-unused",
+  "-Ywarn-unused-import"
+)
+
 // Akka ecosystem
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.11",

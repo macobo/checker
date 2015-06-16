@@ -59,6 +59,7 @@ class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext
         Some(enqueue(listing).map { (listing, _) })
       } else if (count == 0) {
         available = available - listing.check
+        counts = counts - listing.check
         delete(listing)
         None
       } else {

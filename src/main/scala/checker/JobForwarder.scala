@@ -62,7 +62,7 @@ object JobParser {
       CheckFailure(reason)
   }, {
     case x: CheckResultType => {
-      var firstField = JField("success", JBool(x.success))
+      val firstField = JField("success", JBool(x.success))
       val rest = x match {
         case CheckSuccess() => Nil
         case CheckFailure(reason) => JField("reason", JString(reason)) :: Nil
