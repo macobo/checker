@@ -9,7 +9,9 @@ import org.json4s.native.{Serialization, JsonMethods}
 
 import scala.concurrent.duration.Duration
 
-case class Check(project: String, name: String)
+case class Check(project: String, name: String) {
+  def identifier = s"${project}::${name}"
+}
 case class CheckListing(
   check: Check,
   runsEvery: Duration,

@@ -16,11 +16,11 @@ class ClusterManagerSpec
   with WordSpecLike
   with MustMatchers
 {
-  def newManager = {
+  implicit val timeout = Timeout(2.seconds)
+  def actors = {
     val jobManager = TestProbe()
     (TestActorRef(new ClusterManager(jobManager.ref)), jobManager)
   }
-  implicit val timeout = Timeout(2.seconds)
 
   def getState(manager: ActorRef) = {
     val Success(state) = (manager ? GetClusterState()).mapTo[ClusterState].value.get
@@ -42,7 +42,7 @@ class ClusterManagerSpec
 
   "Cluster manager" should {
     "allow hosts to join the cluster" in {
-      val (manager, _) = newManager
+      val (manager, _) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! join(h3, 160000)
@@ -51,7 +51,7 @@ class ClusterManagerSpec
     }
 
     "update hosts when they have timed out" in {
-      val (manager, _) = newManager
+      val (manager, _) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! join(h3, 160000)
@@ -61,7 +61,7 @@ class ClusterManagerSpec
     }
 
     "let jobmanager know of new jobs that are available" in {
-      val (manager, jobs) = newManager
+      val (manager, jobs) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! join(h3, 160000)
@@ -72,7 +72,7 @@ class ClusterManagerSpec
     }
 
     "let jobmanager know of jobs that are unavailable" in {
-      val (manager, jobs) = newManager
+      val (manager, jobs) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! join(h3, 160000)
@@ -87,7 +87,7 @@ class ClusterManagerSpec
     }
 
     "let jobmanager update using heartbeats" in {
-      val (manager, jobs) = newManager
+      val (manager, jobs) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! Heartbeat(h1.id, Some(60000))

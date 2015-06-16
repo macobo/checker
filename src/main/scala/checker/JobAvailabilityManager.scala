@@ -1,18 +1,19 @@
 package checker
 
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.ask
-import akka.actor.{ActorRef, Actor, ActorLogging}
 import akka.util.Timeout
-import checker.JobAvailabilityManager.{DeleteCheck, MakeAvailable, JobsAvailable, JobsUnavailable}
+import checker.JobAvailabilityManager._
 import macobo.disque.commands.JobId
 
-import scala.concurrent.{Await, Future, ExecutionContext}
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Try, Failure, Success}
 
 object JobAvailabilityManager {
   case class JobsAvailable(jobs: Seq[CheckListing])
   case class JobsUnavailable(jobs: Seq[CheckListing])
+  case class GetState()
 
   case class MakeAvailable(check: CheckListing)
   case class DeleteCheck(jobId: JobId)
@@ -48,7 +49,7 @@ class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext
     var available = availableChecks
     var counts = availability
 
-    var futures: Seq[Future[(CheckListing, JobId)]] = checks.map { listing =>
+    val futures: Seq[Future[(CheckListing, JobId)]] = checks.flatMap { listing =>
       val count = counts.getOrElse(listing.check, 0) + delta
       require(count >= 0, "Tried to remove a non-existing check!")
       counts = counts.updated(listing.check, count)
@@ -63,27 +64,30 @@ class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext
       } else {
         None
       }
-    }.flatten
+    }
 
     val combined = Future.sequence(futures)
-    combined.onComplete {
+    Try { Await.result(combined, 10.seconds) } match {
       case Success(inserts) => {
         val pairs = inserts.map { p => (p._1.check, p._2) }
         availableChecks = available
         availability = counts
         queueIds = queueIds ++ pairs
-
-        log.info(s"New checks available. checks=${checks.length}, newCheckCount=${inserts.length}, newChecks=${pairs}")
+        log.info(s"New checks available. checks=${checks.length}, newCheckCount=${inserts.length}, newChecks=${pairs.map(_._1)}")
       }
       case Failure(reason) =>
         log.error(reason, s"Failed to make new checks available. newChecks=${checks}")
     }
-
-    Await.result(combined, 30.seconds)
   }
 
   def receive = {
     case JobsAvailable(checks) =>   updateAvailability(checks, +1)
     case JobsUnavailable(checks) => updateAvailability(checks, -1)
+    case GetState() => {
+      val set = availableChecks.keys.map { check =>
+        (check, availability(check))
+      }.toSet
+      sender() ! set
+    }
   }
 }
