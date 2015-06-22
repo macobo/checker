@@ -19,6 +19,7 @@ case class CheckListing(
   runsEvery: Duration,
   timelimit: Duration
 ) {
+  require(runsEvery > timelimit)
 
   def queueTimeout = timelimit * 1.5
 
