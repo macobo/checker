@@ -15,8 +15,8 @@ object JobAvailabilityManager {
   case class JobsUnavailable(jobs: Seq[CheckListing])
   case class GetState()
 
-  case class MakeAvailable(check: CheckListing)
-  case class DeleteCheck(jobId: JobId)
+  case class MakeAvailable(check: CheckListing, t: Option[Long] = None) extends Timestamped
+  case class DeleteCheck(jobId: JobId, t: Option[Long] = None) extends Timestamped
 }
 
 /**

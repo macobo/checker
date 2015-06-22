@@ -7,30 +7,7 @@ import org.json4s.{CustomSerializer, FieldSerializer, DefaultFormats}
 import org.json4s.FieldSerializer._
 import org.json4s.native.{Serialization, JsonMethods}
 
-import scala.concurrent.duration.Duration
-
-case class Check(project: String, name: String) {
-  def identifier = s"${project}::${name}"
-}
-case class CheckListing(
-  check: Check,
-  runsEvery: Duration,
-  timelimit: Duration
-)
-
 case class Host(id: String, knownChecks: Seq[CheckListing])
-
-sealed trait CheckResultType {
-  def success: Boolean
-}
-case class CheckSuccess() extends CheckResultType               { val success = true }
-case class CheckFailure(reason: String) extends CheckResultType { val success = false }
-
-
-trait Timestamped {
-  def t: Option[Long]
-  val timestamp = t getOrElse System.currentTimeMillis()
-}
 
 sealed trait QueueMessage extends Timestamped {
   def messageType: String
@@ -43,6 +20,7 @@ case class ClusterJoin(hostId: String, knownChecks: Seq[CheckListing], t: Option
 case class Heartbeat(hostId: String, t: Option[Long] = None) extends QueueMessage {
   val messageType = "HEARTBEAT"
 }
+
 case class CheckResultMessage(
   check: Check,
   result: CheckResultType,

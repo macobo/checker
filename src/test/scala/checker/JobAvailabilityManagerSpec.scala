@@ -16,7 +16,7 @@ class FakeQueue extends Actor {
   var calls: List[Any] = Nil
 
   def receive = {
-    case call@MakeAvailable(listing) => {
+    case call@MakeAvailable(listing, _) => {
       sender() ! JobId(listing.check.identifier)
       calls = calls ::: List(call)
     }

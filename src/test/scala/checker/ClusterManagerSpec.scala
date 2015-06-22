@@ -87,7 +87,7 @@ class ClusterManagerSpec
     }
 
     "let jobmanager update using heartbeats" in {
-      val (manager, jobs) = actors
+      val (manager, _) = actors
       manager ! join(h1, 0)
       manager ! join(h2, 50000)
       manager ! Heartbeat(h1.id, Some(60000))
