@@ -1,13 +1,16 @@
-package checker
+package com.github.macobo.checker.server
 
-import akka.actor.{ActorRef, Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import macobo.disque.commands.{Job, JobId}
-import org.json4s.JsonAST.{JString, JBool, JField, JObject}
-import org.json4s.{CustomSerializer, FieldSerializer, DefaultFormats}
 import org.json4s.FieldSerializer._
-import org.json4s.native.{Serialization, JsonMethods}
+import org.json4s.JsonAST.{JBool, JField, JObject, JString}
+import org.json4s.native.{JsonMethods, Serialization}
+import org.json4s.{CustomSerializer, DefaultFormats, FieldSerializer}
 
-case class Host(id: String, knownChecks: Seq[CheckListing])
+case class Host(id: String, knownChecks: Seq[CheckListing]) {
+  lazy val projects: List[String] =
+    knownChecks.map { _.check.project }.toSet.toList.sorted
+}
 
 sealed trait QueueMessage extends Timestamped {
   def messageType: String

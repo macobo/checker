@@ -1,7 +1,8 @@
-package checker
+package com.github.macobo.checker
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import com.github.macobo.checker.server._
 import macobo.disque.commands.{Job, JobId}
 import org.scalatest.{MustMatchers, WordSpecLike}
 

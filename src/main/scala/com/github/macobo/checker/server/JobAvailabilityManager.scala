@@ -1,14 +1,14 @@
-package checker
+package com.github.macobo.checker.server
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
-import checker.JobAvailabilityManager._
+import com.github.macobo.checker.server.JobAvailabilityManager._
 import macobo.disque.commands.JobId
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Try, Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object JobAvailabilityManager {
   case class JobsAvailable(jobs: Seq[CheckListing])

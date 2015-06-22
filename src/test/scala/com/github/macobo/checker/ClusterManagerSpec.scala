@@ -1,10 +1,12 @@
-package checker
+package com.github.macobo.checker
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
-import checker.JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
+import com.github.macobo.checker.server._
+import JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
+import com.github.macobo.checker.server._
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 import scala.concurrent.duration._

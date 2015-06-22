@@ -1,7 +1,7 @@
-package checker
+package com.github.macobo.checker.server
 
-import org.joda.time.LocalDate
 import com.github.nscala_time.time.Imports._
+import org.joda.time.LocalDate
 
 import scala.concurrent.duration.Duration
 

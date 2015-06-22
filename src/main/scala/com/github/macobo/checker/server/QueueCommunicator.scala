@@ -1,6 +1,6 @@
-package checker
+package com.github.macobo.checker.server
 
-import akka.actor.{ActorRef, ActorLogging, Actor}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import macobo.disque.DisqueClient
 import macobo.disque.commands.Job
 
@@ -21,11 +21,11 @@ class QueueCommunicator(
   }
 
   def receive() = {
-    case CheckQueue(target) => {
-      log.debug(s"Checking queues for new messages. queues=${queues}, targetActor=${target.path}")
+    case CheckQueue(targetRef) => {
+      log.debug(s"Checking queues for new messages. queues=${queues}, targetActor=${targetRef.path}")
       client.getJobMulti(queues, Some(10)) match {
         case Some(job: Job[String]) => {
-          target ! job
+          targetRef ! job
           client.acknowledge(job.id)
         }
         case None => {}

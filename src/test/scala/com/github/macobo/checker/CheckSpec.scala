@@ -1,5 +1,6 @@
-package checker
+package com.github.macobo.checker
 
+import com.github.macobo.checker.server.{CheckListing, Check}
 import org.joda.time.DateTime
 import org.scalatest.{MustMatchers, WordSpecLike}
 
