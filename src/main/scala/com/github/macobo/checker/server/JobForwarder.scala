@@ -86,7 +86,6 @@ class JobForwarder(resultManager: ActorRef, clusterManager: ActorRef) extends Ac
   def receive = {
     case Job(message: String, id, source) => {
       processQueueMessage(message, id, source)
-
     }
   }
 }

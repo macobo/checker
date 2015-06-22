@@ -1,6 +1,6 @@
 package com.github.macobo.checker
 
-import akka.actor.{Actor, ActorRef, ActorSystem}
+import akka.actor.{Props, Actor, ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
@@ -8,8 +8,9 @@ import com.github.macobo.checker.server.{JobAvailabilityManager, CheckListing, C
 import JobAvailabilityManager._
 import com.github.macobo.checker.server.{JobAvailabilityManager, CheckListing, Check}
 import macobo.disque.commands.JobId
-import org.scalatest.{MustMatchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterEach, MustMatchers, WordSpecLike}
 
+import scala.collection.script.Reset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
@@ -25,6 +26,7 @@ class FakeQueue extends Actor {
     case call: DeleteCheck =>
       calls = calls ::: List(call)
     case GetState() => sender() ! calls
+    case Reset => calls = Nil
   }
 }
 
@@ -33,11 +35,18 @@ class JobAvailabilityManagerSpec
   with ImplicitSender
   with WordSpecLike
   with MustMatchers
+  with BeforeAndAfterEach
 {
   implicit val timeout = Timeout(2.seconds)
-  def actors = {
-    val queue = TestActorRef[FakeQueue]
-    (TestActorRef(new JobAvailabilityManager(queue)), queue)
+
+  var queue: ActorRef = TestActorRef.create(system, Props(new FakeQueue), "queue")
+  var actor: ActorRef = _
+  override def beforeEach() = {
+    actor = TestActorRef(new JobAvailabilityManager())
+  }
+
+  override def afterEach() = {
+    queue ! Reset
   }
 
   def getState[T:ClassTag](ref: ActorRef) =
@@ -55,7 +64,6 @@ class JobAvailabilityManagerSpec
 
   "Cluster manager" should {
     "keep correct availability counts when checks are added" in {
-      val (actor, _) = actors
       actor ! JobsAvailable(List(c1, c2))
       actor ! JobsAvailable(List(c1))
       actor ! JobsAvailable(List(c1, c3))
@@ -64,7 +72,6 @@ class JobAvailabilityManagerSpec
     }
 
     "keep correct availability counts when checks are deleted" in {
-      val (actor, _) = actors
       actor ! JobsAvailable(List(c1, c2, c3))
       actor ! JobsAvailable(List(c1))
 
@@ -74,7 +81,6 @@ class JobAvailabilityManagerSpec
     }
 
     "add multi-available checks only once to queue" in {
-      val (actor, queue) = actors
       actor ! JobsAvailable(List(c1, c2))
       actor ! JobsAvailable(List(c1, c3))
 
@@ -83,7 +89,6 @@ class JobAvailabilityManagerSpec
     }
 
     "re-add checks which are made unavailable" in {
-      val (actor, queue) = actors
       actor ! JobsAvailable(List(c1, c2))
       actor ! JobsAvailable(List(c1))
       actor ! JobsUnavailable(List(c1, c2))

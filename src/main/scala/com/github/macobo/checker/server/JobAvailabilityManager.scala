@@ -1,6 +1,6 @@
 package com.github.macobo.checker.server
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.macobo.checker.server.JobAvailabilityManager._
@@ -23,12 +23,14 @@ object JobAvailabilityManager {
  * ClusterJobManager keeps track of what checks are currently scheduled in the cluster and deals with certain
  * new checks becoming available (or old ones unavailable).
  */
-class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext)
+class JobAvailabilityManager(implicit ec: ExecutionContext)
   extends Actor with ActorLogging {
 
   var availableChecks = Map.empty[Check, CheckListing]
   var availability = Map.empty[Check, Int]
   var queueIds = Map.empty[Check, JobId]
+
+  lazy val checkQueue: ActorSelection = context.actorSelection("../queue")
 
   def enqueue(check: CheckListing): Future[JobId] = {
     // Note: This piece is _hard_ to distribute without double-scheduling checks.
@@ -36,13 +38,12 @@ class JobAvailabilityManager(checkQueue: ActorRef)(implicit ec: ExecutionContext
     (checkQueue ? MakeAvailable(check)).mapTo[JobId]
   }
 
-  def delete(check: CheckListing) =
-    queueIds.get(check.check) match {
-      case Some(id) =>
-        checkQueue ! DeleteCheck(id)
-      case None =>
-        log.warning(s"Could not make check unavailable, no enqueued checks with that name. check=${check.check}, queueIds=${queueIds}")
-    }
+  def delete(listing: CheckListing) = queueIds.get(listing.check) match {
+    case Some(id) =>
+      checkQueue ! DeleteCheck(id)
+    case None =>
+      log.warning(s"Could not make check unavailable, no enqueued checks with that name. check=${listing.check}, queueIds=${queueIds}")
+  }
 
   // Makes jobs in the sequence available, using an all-or-nothing strategy.
   def updateAvailability(checks: Seq[CheckListing], delta: Int) = {
