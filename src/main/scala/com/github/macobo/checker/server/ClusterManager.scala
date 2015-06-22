@@ -2,7 +2,6 @@ package com.github.macobo.checker.server
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import JobAvailabilityManager.{JobsAvailable, JobsUnavailable}
-import com.github.macobo.checker._
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._

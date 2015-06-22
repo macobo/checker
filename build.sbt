@@ -19,6 +19,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % "2.3.11"
 )
 
+// Libraries for logging.
+//libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.3.9"
+
 // Library for test scaffolding.
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 

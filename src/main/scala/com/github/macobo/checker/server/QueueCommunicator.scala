@@ -18,6 +18,7 @@ class QueueCommunicator(
 
   override def preStart() = {
     client = new DisqueClient(queueHost, queuePort)
+    log.info("connected!")
   }
 
   def receive() = {
