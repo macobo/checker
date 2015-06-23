@@ -6,12 +6,15 @@ import scala.concurrent.duration._
 
 object Server extends App {
   import scala.concurrent.ExecutionContext.Implicits.global
+  import QueueCommunicator._
   val system = ActorSystem("checker-server")
+
+  val queues = List(CLUSTER_QUEUE, RESULTS_QUEUE)
 
   val jobManager =
     system.actorOf(Props(new JobAvailabilityManager()), "job_availability_manager")
   val queueCommunicator =
-    system.actorOf(Props(new QueueCommunicator(List("checker:results", "checker:cluster"))), "queue")
+    system.actorOf(Props(new QueueCommunicator("server", queues)), "queue")
   val clusterManager =
     system.actorOf(Props(new ClusterManager(jobManager)), "job_manager")
   val resultManager =
@@ -19,13 +22,12 @@ object Server extends App {
   val forwarder =
     system.actorOf(Props(new JobForwarder(resultManager, clusterManager)), "forwarder")
 
-  // Every 30 seconds, send a no-op message to every routee of the IngressRouter.
-  val repeatedNoop: Cancellable = system.scheduler.schedule(
+  // Check queue for new messages every few seconds
+  val repeatedCheck: Cancellable = system.scheduler.schedule(
     0.seconds,
     5.seconds,
     queueCommunicator,
     CheckQueue(forwarder)
   )
-  system.registerOnTermination { repeatedNoop.cancel() }
-
+  system.registerOnTermination { repeatedCheck.cancel() }
 }
