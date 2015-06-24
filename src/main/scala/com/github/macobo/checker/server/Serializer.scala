@@ -9,6 +9,7 @@ object Serializer extends DefaultJsonProtocol {
       JsNumber(x.toMillis)
     def read(x: JsValue) = x match {
       case JsNumber(ms) => ms.toInt.millis
+      case _ => deserializationError("Number of milliseconds expected")
     }
   }
 
@@ -89,10 +90,11 @@ object Serializer extends DefaultJsonProtocol {
     }
 
     def read(x: JsValue) = {
-      x.asJsObject.getFields("message_type").head match {
+      x.asJsObject.fields("message_type") match {
         case JsString("HEARTBEAT") => x.convertTo[Heartbeat]
         case JsString("CLUSTER_JOIN") => x.convertTo[ClusterJoin]
         case JsString("CHECKRESULT") => x.convertTo[CheckResultMessage]
+        case x => deserializationError(s"Expected message type, got ${x}")
       }
     }
   }
