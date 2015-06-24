@@ -3,6 +3,8 @@ package com.github.macobo.checker.server
 import akka.actor.{Actor, ActorLogging, ActorRef, Stash}
 import macobo.disque.DisqueClient
 import macobo.disque.commands.Job
+import spray.json._
+import Serializer._
 
 import scala.concurrent.duration._
 
@@ -50,7 +52,7 @@ class QueueCommunicator(
 
   def enqueue: Receive = {
     case Enqueue(queue, job, _, _) => {
-      val jobJson = JobParser.jsonify(job)
+      val jobJson = job.toJson.compactPrint
       log.debug(s"Adding job to ${queue}. job=${jobJson}")
       client.addJob(queue, jobJson, 5.seconds.toMillis)
     }

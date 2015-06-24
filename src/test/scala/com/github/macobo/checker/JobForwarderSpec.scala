@@ -5,6 +5,9 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import com.github.macobo.checker.server._
 import macobo.disque.commands.{Job, JobId}
 import org.scalatest.{MustMatchers, WordSpecLike}
+import scala.concurrent.duration._
+import Serializer._
+import spray.json._
 
 class JobForwarderSpec
   extends TestKit(ActorSystem())
@@ -12,18 +15,47 @@ class JobForwarderSpec
   with WordSpecLike
   with MustMatchers
 {
-  def parse = JobParser.parseMessage _
-  def jsonify = JobParser.jsonify _
   def job(x: String) = Job(x, JobId(""), None)
+  def parse(x: String) = x.parseJson.convertTo[QueueMessage]
 
-  "JobForwarder" should {
+  "JobForwarder" when {
     val heartbeat = Heartbeat("foo.bar.zoo")
-    val heartbeatMsg = """{"hostId":"foo.bar.zoo","messageType":"HEARTBEAT"}"""
+    val heartbeatMsg = """{"host_id":"foo.bar.zoo","message_type":"HEARTBEAT"}"""
 
-    val checkresult = CheckResultMessage(Check("project", "checkname"), CheckSuccess(), "loglog", 1000)
-    val checkresultMsg = """{"check":{"project":"project","name":"checkname"},"result":{"success":true},"log":"loglog","timeTaken":1000,"messageType":"CHECKRESULT"}"""
+    val checkresult = CheckResultMessage(Check("project", "checkname"), CheckSuccess(), "loglog", 1.second)
+    val checkresultMsg =
+      """
+        |{
+        |   "check": {
+        |     "project": "project",
+        |     "name": "checkname"
+        |   },
+        |   "result": {"success": true},
+        |   "log":"loglog",
+        |   "time_taken":1000,
+        |   "message_type":"CHECKRESULT"
+        | }""".stripMargin
 
-    "input message" should {
+    val clusterJoin = ClusterJoin("foo.bar", List(CheckListing(Check("project", "checkname"), 5.seconds, 2.seconds)))
+    val clusterJoinMsg =
+      """
+        | {
+        |   "host_id": "foo.bar",
+        |   "known_checks": [
+        |     {
+        |       "check": {
+        |         "project": "project",
+        |         "name": "checkname"
+        |       },
+        |       "runs_every": 5000,
+        |       "timelimit": 2000
+        |     }
+        |   ],
+        |   "message_type": "CLUSTER_JOIN"
+        | }
+      """.stripMargin
+
+    "input message" when {
       "deserializing" should {
         "for HeartBeat" in {
           parse(heartbeatMsg) must equal(heartbeat)
@@ -32,14 +64,22 @@ class JobForwarderSpec
         "for CheckResultMessage" in {
           parse(checkresultMsg) must equal(checkresult)
         }
+
+        "for ClusterJoin" in {
+          parse(clusterJoinMsg) must equal(clusterJoin)
+        }
       }
       "serializing" should {
         "for HeartBeat" in {
-          jsonify(heartbeat) must equal(heartbeatMsg)
+          heartbeat.toJson must equal(heartbeatMsg.parseJson)
         }
 
         "for CheckResultMessage" in {
-          jsonify(checkresult) must equal(checkresultMsg)
+          checkresult.toJson must equal(checkresultMsg.parseJson)
+        }
+
+        "for ClusterJoin" in {
+          clusterJoin.toJson must equal(clusterJoinMsg.parseJson)
         }
       }
     }

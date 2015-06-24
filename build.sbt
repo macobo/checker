@@ -29,7 +29,7 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 libraryDependencies += "net.debasishg" %% "redisclient" % "3.0"
 
 // Library for parsing json.
-libraryDependencies += "org.json4s" %% "json4s-native" % "3.2.11"
+libraryDependencies += "io.spray" %%  "spray-json" % "1.3.2"
 
 // Datetime manipulation (jodatime scala wrapper)
 libraryDependencies += "com.github.nscala-time" %% "nscala-time" % "2.0.0"
