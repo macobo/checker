@@ -2,20 +2,26 @@ package com.github.macobo.checker.server
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import JobAvailabilityManager.{JobsAvailable, JobsUnavailable}
+import com.github.macobo.checker.server.ClusterManager.{ClusterState, GetClusterState, UpdateCluster}
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
 
-case class UpdateCluster(t: Option[Long]) extends Timestamped
+object ClusterManager {
+  val HEARTBEAT_FREQUENCY = 1.minutes
 
-case class GetClusterState()
-case class ClusterState(hosts: List[(Host, Long)])
+  case class UpdateCluster(t: Option[Long]) extends Timestamped
+
+  case class GetClusterState()
+
+  case class ClusterState(hosts: List[(Host, Long)])
+}
 
 /* ClusterManager manages a fleet of check runners, checking their health and allowing new machines to join the fleet
  * dynamically.
  */
 class ClusterManager(jobManager: ActorRef) extends Actor with ActorLogging {
-  val HEARTBEAT_FREQUENCY = 1.minutes
+  import ClusterManager._
 
   var onlineHosts: Map[String, Host] = Map.empty
   var lastSeen: Map[String, Long] = Map.empty
@@ -46,7 +52,7 @@ class ClusterManager(jobManager: ActorRef) extends Actor with ActorLogging {
       lastSeen = lastSeen.updated(m.hostId, m.timestamp)
     }
     case m: Heartbeat => {
-      // :TODO: logic for checking a resurrection
+      // :TODO: if this is from an unseen host, send it a message to try to re-announce it (with a short TTL).
       require(lastSeen.contains(m.hostId))
       log.debug(s"Heartbeat from ${m.hostId} at ${new DateTime(m.timestamp)}")
       lastSeen = lastSeen.updated(m.hostId, m.timestamp)

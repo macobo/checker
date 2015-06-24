@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
+import com.github.macobo.checker.server.ClusterManager._
 import com.github.macobo.checker.server._
 import JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
 import com.github.macobo.checker.server._

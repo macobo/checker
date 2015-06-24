@@ -32,18 +32,10 @@ class QueueCommunicator(
   with ActorLogging
   with Stash
 {
-  var client: DisqueClient = null
   import QueueCommunicator._
+  lazy val client =  new DisqueClient(queueHost, queuePort)
 
   val queueAddTimeout = 5.seconds.toMillis
-
-  override def preStart() = {
-    client = new DisqueClient(queueHost, queuePort)
-    queueType match {
-      case "server" => context.become(serverMode)
-      case "runner" => context.become(runnerMode)
-    }
-  }
 
   def checkQueue: Receive = {
     case CheckQueue(targetRef) => {
@@ -60,7 +52,7 @@ class QueueCommunicator(
 
   def addJobs: Receive = {
     case MakeAvailable(listing, t) => {
-      val jobJson = listing.toJson.compactPrint
+      val jobJson = listing.check.toJson.compactPrint
       // TODO: support check timeouts, delay here
       val id = client.addJob(projectQueue(listing.check), jobJson, queueAddTimeout)
       log.debug(s"Making check available: ${listing}")
@@ -79,5 +71,8 @@ class QueueCommunicator(
   def runnerMode = checkQueue orElse enqueue
   def serverMode = checkQueue orElse addJobs
 
-  def receive() = serverMode
+  def receive() = queueType match {
+    case "server" => serverMode
+    case "runner" => runnerMode
+  }
 }
