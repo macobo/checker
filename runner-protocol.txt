@@ -1,0 +1,28 @@
+Each runner has a bunch of checks they can run, identified by a pair of (project, name), with a timeout.
+
+Each runner listens on the following queues:
+1) checker:project:<project> - for each project the checker has.
+    Every tick, it tries to grab a task from there. Described in detail below.
+2) checker:runner:<hostid> - targeted messages to this actor. Types and reactions:
+   { request: "reannounce" } - re-send clusterjoin event to `checker:cluster` queue
+
+New tasks:
+We get a job from the queue.
+If we cannot process this (no check from that project with such a name) we re-add it using ENQUEUE jobid
+
+If we can process this, we find the check and run it, measuring runtime and capturing a "log" of information that might
+be useful for the checker end-user.
+The result is put into the queue `checker:results` and has the following format:
+    {
+        "check": {
+            "project": string,
+            "name": string
+        },
+        "result": {
+            "success": true | false,
+            ["reason": string]
+        },
+        "time_taken": nmilliseconds,
+        "log": string,
+        "message_type": "CHECKRESULT"
+    }
