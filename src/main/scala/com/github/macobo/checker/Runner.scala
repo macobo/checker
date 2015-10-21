@@ -3,14 +3,22 @@ package com.github.macobo.checker
 import java.net.InetAddress
 
 import akka.actor.{Cancellable, ActorRef, Props, ActorSystem}
-import com.github.macobo.checker.runner.Notifier
+import com.github.macobo.checker.runner._
 import com.github.macobo.checker.server._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
-object Runner extends App {
-  import scala.concurrent.ExecutionContext.Implicits.global
+class Runner(collectors: List[CheckCollector])(implicit ec: ExecutionContext) extends App with CheckUtil {
+  lazy val checkMap: Map[Check, CheckDefinition] = {
+    val (checks, collisions) = merge(collectors.map { _.checks })
+    require(collisions.isEmpty, s"Multiple definitions for checks: ${collisions.map { _._1 }}")
+    checks
+  }
+  lazy val listings = checkMap.values.map { _.listing }.toList
+  lazy val projectNames = projects(checkMap.keys)
+
   val system = ActorSystem("checker-runner")
 
   // TODO: Use hashids or something similar
@@ -19,12 +27,8 @@ object Runner extends App {
 
   val queues = List(
     // messages to this particular runner
-    s"checker::runner::${hostId}"
-  )
-  val checks = List(
-    CheckListing(Check("foo", "bar"), 20.seconds, 5.seconds),
-    CheckListing(Check("foo", "zoo"), 7.seconds, 5.seconds)
-  )
+    QueueCommunicator.hostQueue(hostId)
+  ) ++ projectNames.map { QueueCommunicator.projectQueue(_) }
 
   val queueCommunicator =
     system.actorOf(Props(new QueueCommunicator("runner", queues)), "queue")
@@ -32,7 +36,8 @@ object Runner extends App {
   val notifier =
     system.actorOf(Props(new Notifier(hostId)), "notifier")
 
-  notifier ! checks
+  // Let the server know we know how to run these checks.
+  notifier ! Announce(listings)
 
   def createRepeatedMessage(actor: ActorRef, every: FiniteDuration, message: Any) = {
     val s: Cancellable = system.scheduler.schedule(

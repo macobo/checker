@@ -17,9 +17,11 @@ object QueueCommunicator {
   val RESULTS_QUEUE = "checker:results"
   val CLUSTER_QUEUE = "checker:cluster"
 
-  def projectQueue(check: Check) = {
-    s"checker:project:${check.project}"
-  }
+  def projectQueue(project: String) =
+    s"checker:project:${project}"
+
+  def hostQueue(host: String) =
+    s"checker::runner::${host}"
 }
 
 // Actor which can pull messages from the queue and forward them to be properly parsed and managed
@@ -53,8 +55,8 @@ class QueueCommunicator(
   def addJobs: Receive = {
     case MakeAvailable(listing, t) => {
       val jobJson = listing.check.toJson.compactPrint
-      // TODO: support check timeouts, delay here
-      val id = client.addJob(projectQueue(listing.check), jobJson, queueAddTimeout)
+      // TODO: support check timeouts, delay here.
+      val id = client.addJob(projectQueue(listing.check.project), jobJson, queueAddTimeout)
       log.debug(s"Making check available: ${listing}")
       sender ! id
     }
