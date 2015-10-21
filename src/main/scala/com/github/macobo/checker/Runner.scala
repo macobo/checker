@@ -31,7 +31,7 @@ class Runner(collectors: List[CheckCollector])(implicit ec: ExecutionContext) ex
   ) ++ projectNames.map { QueueCommunicator.projectQueue(_) }
 
   val queueCommunicator =
-    system.actorOf(Props(new QueueCommunicator("runner", queues)), "queue")
+    system.actorOf(Props(new QueueCommunicator(RunnerMode, queues)), "queue")
 
   val notifier =
     system.actorOf(Props(new Notifier(hostId)), "notifier")

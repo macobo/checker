@@ -14,7 +14,7 @@ object Server extends App {
   val jobManager =
     system.actorOf(Props(new JobAvailabilityManager()), "job_availability_manager")
   val queueCommunicator =
-    system.actorOf(Props(new QueueCommunicator("server", queues)), "queue")
+    system.actorOf(Props(new QueueCommunicator(ServerMode, queues)), "queue")
   val clusterManager =
     system.actorOf(Props(new ClusterManager(jobManager)), "job_manager")
   val resultManager =

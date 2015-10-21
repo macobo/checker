@@ -24,9 +24,13 @@ object QueueCommunicator {
     s"checker::runner::${host}"
 }
 
+sealed trait QueueMode
+case object ServerMode extends QueueMode
+case object RunnerMode extends QueueMode
+
 // Actor which can pull messages from the queue and forward them to be properly parsed and managed
 class QueueCommunicator(
-  queueType: String,
+  queueMode: QueueMode,
   queues: List[String],
   queueHost: String = "localhost",
   queuePort: Int = 7711
@@ -73,8 +77,8 @@ class QueueCommunicator(
   def runnerMode = checkQueue orElse enqueue
   def serverMode = checkQueue orElse addJobs
 
-  def receive() = queueType match {
-    case "server" => serverMode
-    case "runner" => runnerMode
+  def receive() = queueMode match {
+    case ServerMode => serverMode
+    case RunnerMode => runnerMode
   }
 }
