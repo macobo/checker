@@ -3,7 +3,6 @@ package com.github.macobo.checker
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import com.github.macobo.checker.server._
-import macobo.disque.commands.{Job, JobId}
 import org.scalatest.{MustMatchers, WordSpecLike}
 import scala.concurrent.duration._
 import Serializer._
@@ -15,7 +14,7 @@ class JobForwarderSpec
   with WordSpecLike
   with MustMatchers
 {
-  def job(x: String) = Job(x, JobId(""), None)
+  def job(x: String) = Job(x, "", None)
   def parse(x: String) = x.parseJson.convertTo[QueueMessage]
 
   "JobForwarder" when {

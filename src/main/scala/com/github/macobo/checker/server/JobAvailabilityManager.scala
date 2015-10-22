@@ -4,13 +4,14 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.github.macobo.checker.server.JobAvailabilityManager._
-import macobo.disque.commands.JobId
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 object JobAvailabilityManager {
+  type JobId = String
+
   case class JobsAvailable(jobs: Seq[CheckListing])
   case class JobsUnavailable(jobs: Seq[CheckListing])
   case class GetState()

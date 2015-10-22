@@ -1,15 +1,21 @@
 package com.github.macobo.checker.helpers
 
-import com.github.macobo.checker.server.{QueueMessage, Serializer}
-import macobo.disque.DisqueClient
+import biz.paluch.spinach.{DisqueClient, DisqueURI}
+import com.github.macobo.checker.server.QueueMessage
+
+import scala.concurrent.duration._
 import spray.json._
 
 trait DisqueQueue {
-  lazy private val client = new DisqueClient("localhost", 7711)
+  lazy val commands = {
+    val client = new DisqueClient(DisqueURI.create("localhost", 7711))
+    client.connect().sync()
+  }
 
   def readJob[T <: QueueMessage](queue: String)(implicit  evidence$1: JsonReader[T]): Option[T] = {
-    client.getJob(queue, Some(10)).map { job =>
-      job.value.parseJson.convertTo[T]
+    commands.getjob(10, SECONDS, queue) match {
+      case null => None
+      case x => Some(x.getBody.parseJson.convertTo[T])
     }
   }
 }

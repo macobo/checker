@@ -1,13 +1,11 @@
 package com.github.macobo.checker
 
-import akka.actor.{Props, Actor, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
-import com.github.macobo.checker.server.{JobAvailabilityManager, CheckListing, Check}
-import JobAvailabilityManager._
-import com.github.macobo.checker.server.{JobAvailabilityManager, CheckListing, Check}
-import macobo.disque.commands.JobId
+import com.github.macobo.checker.server.JobAvailabilityManager._
+import com.github.macobo.checker.server.{Check, CheckListing, JobAvailabilityManager}
 import org.scalatest.{BeforeAndAfterEach, MustMatchers, WordSpecLike}
 
 import scala.collection.script.Reset
@@ -20,7 +18,7 @@ class FakeQueue extends Actor {
 
   def receive = {
     case call@MakeAvailable(listing, _) => {
-      sender() ! JobId(listing.check.identifier)
+      sender() ! listing.check.identifier
       calls = calls ::: List(call)
     }
     case call: DeleteCheck =>
@@ -59,7 +57,7 @@ class JobAvailabilityManagerSpec
   type CheckCount = Set[(Check, Int)]
   def expectJob(probe: TestProbe, job: CheckListing) = {
     probe.expectMsg(MakeAvailable(job))
-    probe.reply(JobId(job.check.identifier))
+    probe.reply(job.check.identifier)
   }
 
   "Cluster manager" should {
@@ -96,7 +94,7 @@ class JobAvailabilityManagerSpec
 
       val expected = List(
         MakeAvailable(c1), MakeAvailable(c2),
-        DeleteCheck(JobId(c2.check.identifier)),
+        DeleteCheck(c2.check.identifier),
         MakeAvailable(c2))
       getState[List[Any]](queue) must equal(expected)
     }

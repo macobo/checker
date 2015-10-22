@@ -6,7 +6,6 @@ import com.github.macobo.checker.server._
 case class Announce(checks: List[CheckListing])
 
 class Notifier(hostId: String) extends Actor with ActorLogging {
-  import com.github.macobo.checker.server.QueueCommunicator._
   def queue = context.actorSelection("../queue")
 
   def notifier(checks: List[CheckListing]): Receive = {

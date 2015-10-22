@@ -1,9 +1,9 @@
 package com.github.macobo.checker.server
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import macobo.disque.commands.{Job, JobId}
+import com.github.macobo.checker.server.JobAvailabilityManager.JobId
+import com.github.macobo.checker.server.Serializer._
 import spray.json._
-import Serializer._
 
 import scala.concurrent.duration.Duration
 

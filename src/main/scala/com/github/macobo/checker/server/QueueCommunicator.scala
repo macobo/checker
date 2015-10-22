@@ -1,11 +1,15 @@
 package com.github.macobo.checker.server
 
+import java.util
+
+import scala.collection.JavaConverters._
 import akka.actor.{Actor, ActorLogging, ActorRef, Stash}
-import com.github.macobo.checker.server.JobAvailabilityManager.MakeAvailable
-import macobo.disque.DisqueClient
-import macobo.disque.commands.Job
+import biz.paluch.spinach.api.sync.DisqueCommands
+import biz.paluch.spinach.{DisqueClient, DisqueURI}
+import com.github.macobo.checker.server.JobAvailabilityManager.{JobId, MakeAvailable}
+import com.github.macobo.checker.server.Serializer._
+import com.lambdaworks.redis.cluster.ClusterClientOptions
 import spray.json._
-import Serializer._
 
 import scala.concurrent.duration._
 
@@ -28,7 +32,23 @@ sealed trait QueueMode
 case object ServerMode extends QueueMode
 case object RunnerMode extends QueueMode
 
-// Actor which can pull messages from the queue and forward them to be properly parsed and managed
+object Job {
+  type spinachJob = biz.paluch.spinach.api.Job[String, String]
+  def apply(job: spinachJob): Job =
+    Job(job.getBody, job.getId, Some(job.getQueue))
+
+  def get(jobs: util.List[spinachJob]): Option[Job] = {
+    jobs.asScala.toList match {
+      case Nil => None
+      case x::Nil => Some(apply(x))
+      case _ => throw new IllegalArgumentException("Tried to construct a job with multiple arguments.")
+    }
+  }
+}
+case class Job(message: String, id: JobId, source: Option[String])
+
+// Actor which abstracts away the underlying queue.
+// It can both check various queues in a pull-based model as well as add things to the queue.
 class QueueCommunicator(
   queueMode: QueueMode,
   queues: List[String],
@@ -39,17 +59,24 @@ class QueueCommunicator(
   with Stash
 {
   import QueueCommunicator._
-  lazy val client =  new DisqueClient(queueHost, queuePort)
 
-  val queueAddTimeout = 5.seconds.toMillis
+  lazy val client = {
+    val client = new DisqueClient(DisqueURI.create(queueHost, queuePort));
+    client.setOptions(new ClusterClientOptions.Builder().refreshClusterView(true).build());
+    client
+  }
+
+  lazy val syncCommands: DisqueCommands[String, String] = client.connect().sync()
+
+  val ackTimeout = 5.seconds.toMillis
 
   def checkQueue: Receive = {
     case CheckQueue(targetRef) => {
       log.debug(s"Checking queues for new messages. queues=${queues}, targetActor=${targetRef.path}")
-      client.getJobMulti(queues, Some(10)) match {
-        case Some(job: Job[String]) => {
+      Job.get(syncCommands.getjobs(0, SECONDS, 1, queues: _*)) match {
+        case Some(job) => {
           targetRef ! job
-          client.acknowledge(job.id)
+          syncCommands.ackjob(job.id)
         }
         case None => {}
       }
@@ -60,8 +87,14 @@ class QueueCommunicator(
     case MakeAvailable(listing, t) => {
       val jobJson = listing.check.toJson.compactPrint
       // TODO: support check timeouts, delay here.
-      val id = client.addJob(projectQueue(listing.check.project), jobJson, queueAddTimeout)
-      log.debug(s"Making check available: ${listing}")
+      val id = syncCommands.addjob(
+        projectQueue(listing.check.project),
+        jobJson,
+        ackTimeout,
+        MILLISECONDS
+      )
+
+      log.debug(s"Making check available: ${listing}. id=${id}")
       sender ! id
     }
   }
@@ -70,7 +103,7 @@ class QueueCommunicator(
     case Enqueue(queue, job, _, _) => {
       val jobJson = job.toJson.compactPrint
       log.debug(s"Adding job to ${queue}. job=${jobJson}")
-      client.addJob(queue, jobJson, queueAddTimeout)
+      syncCommands.addjob(queue, jobJson, ackTimeout, MILLISECONDS)
     }
   }
 
