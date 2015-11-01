@@ -3,6 +3,7 @@ package com.github.macobo.checker
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import com.github.macobo.checker.server._
+import com.github.macobo.checker.server.protocol._
 import org.scalatest.{MustMatchers, WordSpecLike}
 import scala.concurrent.duration._
 import Serializer._
@@ -21,7 +22,7 @@ class JobForwarderSpec
     val heartbeat = Heartbeat("foo.bar.zoo")
     val heartbeatMsg = """{"host_id":"foo.bar.zoo","message_type":"HEARTBEAT"}"""
 
-    val checkresult = CheckResultMessage(Check("project", "checkname"), CheckSuccess(), "loglog", 1.second)
+    val checkresult = CheckResultMessage(CheckId("project", "checkname"), CheckSuccess(), "loglog", 1.second)
     val checkresultMsg =
       """
         |{
@@ -35,7 +36,7 @@ class JobForwarderSpec
         |   "message_type":"CHECKRESULT"
         | }""".stripMargin
 
-    val clusterJoin = ClusterJoin("foo.bar", List(CheckListing(Check("project", "checkname"), 5.seconds, 2.seconds)))
+    val clusterJoin = RunnerJoin("foo.bar", List(CheckListing(CheckId("project", "checkname"), 5.seconds, 2.seconds)))
     val clusterJoinMsg =
       """
         | {
@@ -86,7 +87,7 @@ class JobForwarderSpec
     "message forwarding" should {
       val resultman = TestProbe()
       val cluster = TestProbe()
-      val forwarder = TestActorRef(new JobForwarder(resultman.ref, cluster.ref))
+      val forwarder = TestActorRef(new QueueMessageForwarder(resultman.ref, cluster.ref))
 
       "forwarding a heartbeat" in {
         forwarder ! job(heartbeatMsg)

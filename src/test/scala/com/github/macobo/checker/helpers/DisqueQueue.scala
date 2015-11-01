@@ -1,7 +1,7 @@
 package com.github.macobo.checker.helpers
 
 import biz.paluch.spinach.{DisqueClient, DisqueURI}
-import com.github.macobo.checker.server.QueueMessage
+import com.github.macobo.checker.server.protocol.QueueMessage
 
 import scala.concurrent.duration._
 import spray.json._

@@ -20,7 +20,7 @@ object Server extends App {
   val resultManager =
     system.actorOf(Props(new ResultManager()), "result_manager")
   val forwarder =
-    system.actorOf(Props(new JobForwarder(resultManager, clusterManager)), "forwarder")
+    system.actorOf(Props(new QueueMessageForwarder(resultManager, clusterManager)), "forwarder")
 
   // Check queue for new messages every few seconds
   val repeatedCheck: Cancellable = system.scheduler.schedule(

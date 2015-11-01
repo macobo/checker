@@ -1,8 +1,8 @@
 package com.github.macobo.checker.server
 
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import JobAvailabilityManager.{JobsAvailable, JobsUnavailable}
-import com.github.macobo.checker.server.ClusterManager.{ClusterState, GetClusterState, UpdateCluster}
+import com.github.macobo.checker.server.JobAvailabilityManager.{JobsAvailable, JobsUnavailable}
+import com.github.macobo.checker.server.protocol.{Heartbeat, Host, RunnerJoin}
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._
@@ -45,9 +45,9 @@ class ClusterManager(jobManager: ActorRef) extends Actor with ActorLogging {
   }
 
   def receive = {
-    case m: ClusterJoin => {
+    case m: RunnerJoin => {
       jobManager ! JobsAvailable(m.knownChecks)
-      log.info(s"${m.hostId} joined the runner cluster! Projects: ${m.host.projects.mkString(", ")}")
+      log.info(s"${m.hostId} joined the runner cluster! Projects: ${m.host.knownProjects.mkString(", ")}")
       onlineHosts = onlineHosts.updated(m.hostId, m.host)
       lastSeen = lastSeen.updated(m.hostId, m.timestamp)
     }

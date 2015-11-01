@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import akka.util.Timeout
 import com.github.macobo.checker.server.JobAvailabilityManager._
-import com.github.macobo.checker.server.{Check, CheckListing, JobAvailabilityManager}
+import com.github.macobo.checker.server.{CheckId, CheckListing, JobAvailabilityManager}
 import org.scalatest.{BeforeAndAfterEach, MustMatchers, WordSpecLike}
 
 import scala.collection.script.Reset
@@ -50,11 +50,11 @@ class JobAvailabilityManagerSpec
   def getState[T:ClassTag](ref: ActorRef) =
     (ref ? GetState()).mapTo[T].value.get.get
 
-  val c1 = CheckListing(Check("tests", "t1"), 3.minutes, 2.minutes)
-  val c2 = CheckListing(Check("tests", "t2"), 3.minutes, 2.minutes)
-  val c3 = CheckListing(Check("tests", "t3"), 3.minutes, 2.minutes)
+  val c1 = CheckListing(CheckId("tests", "t1"), 3.minutes, 2.minutes)
+  val c2 = CheckListing(CheckId("tests", "t2"), 3.minutes, 2.minutes)
+  val c3 = CheckListing(CheckId("tests", "t3"), 3.minutes, 2.minutes)
 
-  type CheckCount = Set[(Check, Int)]
+  type CheckCount = Set[(CheckId, Int)]
   def expectJob(probe: TestProbe, job: CheckListing) = {
     probe.expectMsg(MakeAvailable(job))
     probe.reply(job.check.identifier)

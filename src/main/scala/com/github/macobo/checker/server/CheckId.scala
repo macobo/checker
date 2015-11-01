@@ -10,16 +10,16 @@ trait Timestamped {
   val timestamp = t getOrElse System.currentTimeMillis()
 }
 
-case class Check(project: String, name: String) {
+case class CheckId(project: String, name: String) {
   def identifier = s"${project}::${name}"
 }
 
 case class CheckListing(
-  check: Check,
+  check: CheckId,
   runsEvery: Duration,
   timelimit: Duration
 ) {
-  require(runsEvery > timelimit)
+  require(runsEvery > timelimit, "Check should not run more frequently than the time limit.")
 
   def queueTimeout = timelimit * 1.5
 

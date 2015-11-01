@@ -1,6 +1,6 @@
 package com.github.macobo.checker.runner
 
-import com.github.macobo.checker.server.{CheckListing, Check}
+import com.github.macobo.checker.server.{CheckListing, CheckId}
 
 import scala.concurrent.duration._
 
@@ -10,7 +10,7 @@ class Lazy[T](wrp: => T) {
 
 // A concrete check that can be run.
 case class CheckDefinition(
-  check: Check,
+  check: CheckId,
   registerFn: (CheckDefinition => Unit),
   testFunction: Option[Lazy[Unit]] = None,
   runsEvery: Duration = 5.seconds,
@@ -35,7 +35,7 @@ case class CheckDefinition(
 }
 
 trait CheckCollector {
-  var checks: Map[Check, CheckDefinition] = Map.empty
+  var checks: Map[CheckId, CheckDefinition] = Map.empty
 
   protected def register(definition: CheckDefinition): Unit = {
     require(!checks.contains(definition.check),
@@ -50,7 +50,7 @@ trait CheckProject extends CheckCollector {
 
   implicit def stringToDef(name: String) =
     CheckDefinition(
-      Check(projectName, name),
+      CheckId(projectName, name),
       register,
       testFunction = None,
       runsEvery = defaultRunFrequency,

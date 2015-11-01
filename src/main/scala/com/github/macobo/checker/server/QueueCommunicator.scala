@@ -2,12 +2,14 @@ package com.github.macobo.checker.server
 
 import java.util
 
+import com.github.macobo.checker.server.protocol.{QueueMessage, Serializer}
+
 import scala.collection.JavaConverters._
 import akka.actor.{Actor, ActorLogging, ActorRef, Stash}
 import biz.paluch.spinach.api.sync.DisqueCommands
 import biz.paluch.spinach.{DisqueClient, DisqueURI}
 import com.github.macobo.checker.server.JobAvailabilityManager.{JobId, MakeAvailable}
-import com.github.macobo.checker.server.Serializer._
+import Serializer._
 import com.lambdaworks.redis.cluster.ClusterClientOptions
 import spray.json._
 

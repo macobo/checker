@@ -2,16 +2,17 @@ package com.github.macobo.checker
 
 import java.net.InetAddress
 
-import akka.actor.{Cancellable, ActorRef, Props, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import com.github.macobo.checker.runner._
 import com.github.macobo.checker.server._
+import com.github.macobo.checker.server.protocol.Heartbeat
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
 class Runner(collectors: List[CheckCollector])(implicit ec: ExecutionContext) extends App with CheckUtil {
-  lazy val checkMap: Map[Check, CheckDefinition] = {
+  lazy val checkMap: Map[CheckId, CheckDefinition] = {
     val (checks, collisions) = merge(collectors.map { _.checks })
     require(collisions.isEmpty, s"Multiple definitions for checks: ${collisions.map { _._1 }}")
     checks

@@ -27,9 +27,9 @@ object JobAvailabilityManager {
 class JobAvailabilityManager(implicit ec: ExecutionContext)
   extends Actor with ActorLogging {
 
-  var availableChecks = Map.empty[Check, CheckListing]
-  var availability = Map.empty[Check, Int]
-  var queueIds = Map.empty[Check, JobId]
+  var availableChecks = Map.empty[CheckId, CheckListing]
+  var availability = Map.empty[CheckId, Int]
+  var queueIds = Map.empty[CheckId, JobId]
 
   lazy val checkQueue: ActorSelection = context.actorSelection("../queue")
 

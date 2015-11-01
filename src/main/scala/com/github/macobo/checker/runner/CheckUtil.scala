@@ -1,6 +1,6 @@
 package com.github.macobo.checker.runner
 
-import com.github.macobo.checker.server.{Check, CheckListing}
+import com.github.macobo.checker.server.{CheckId, CheckListing}
 
 /** Util functions for manipulating collections of checks */
 trait CheckUtil {
@@ -15,6 +15,6 @@ trait CheckUtil {
       }
     }
 
-  def projects(checks: Iterable[Check]): Set[String] =
+  def projects(checks: Iterable[CheckId]): Set[String] =
     checks.map { _.project }.toSet
 }

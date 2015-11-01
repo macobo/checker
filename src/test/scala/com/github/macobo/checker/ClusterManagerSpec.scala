@@ -8,6 +8,7 @@ import com.github.macobo.checker.server.ClusterManager._
 import com.github.macobo.checker.server._
 import JobAvailabilityManager.{JobsUnavailable, JobsAvailable}
 import com.github.macobo.checker.server._
+import com.github.macobo.checker.server.protocol.{Heartbeat, RunnerJoin, Host}
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 import scala.concurrent.duration._
@@ -34,11 +35,11 @@ class ClusterManagerSpec
     getState(manager).hosts.sortBy { _._2 }
 
   def join(host: Host, t: Long) =
-    ClusterJoin(host.id, host.knownChecks, Some(t))
+    RunnerJoin(host.id, host.knownChecks, Some(t))
 
-  val c1 = CheckListing(Check("tests", "t1"), 3.minutes, 2.minutes)
-  val c2 = CheckListing(Check("tests", "t2"), 3.minutes, 2.minutes)
-  val c3 = CheckListing(Check("tests", "t3"), 3.minutes, 2.minutes)
+  val c1 = CheckListing(CheckId("tests", "t1"), 3.minutes, 2.minutes)
+  val c2 = CheckListing(CheckId("tests", "t2"), 3.minutes, 2.minutes)
+  val c3 = CheckListing(CheckId("tests", "t3"), 3.minutes, 2.minutes)
   val h1 = Host("h1", Seq(c1, c2))
   val h2 = Host("h2", Seq(c3))
   val h3 = Host("h3", Seq(c1))

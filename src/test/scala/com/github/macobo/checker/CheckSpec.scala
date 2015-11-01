@@ -1,13 +1,13 @@
 package com.github.macobo.checker
 
-import com.github.macobo.checker.server.{CheckListing, Check}
+import com.github.macobo.checker.server.{CheckListing, CheckId}
 import org.joda.time.DateTime
 import org.scalatest.{MustMatchers, WordSpecLike}
 
 import scala.concurrent.duration._
 
 class CheckSpec extends WordSpecLike with MustMatchers {
-  val check = Check("proj", "name")
+  val check = CheckId("proj", "name")
 
   "CheckListing next run start time calculation" should {
     "give correct next run when starting from epoch" in {
