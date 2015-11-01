@@ -1,0 +1,49 @@
+# Overview
+
+Checker is a tool to run sanity checks against your infrastructure in a scalable and language-agnostic way.
+
+Examples of good sanity checks include checking if your home page contains any dead links, if any users have signed up recently, if your message queue has processed any messages in the past hour or other things which _should_ always be invariantly true.
+
+Checker is divided into two pieces:
+- Client libraries for writing checks, ran by a runner which can execute those checks.
+- Checker server which handles check scheduling, gathering results and presenting them as a web page.
+
+An example check definition is:
+
+```
+FILLME
+```
+
+As a client, you start up the checker server and N different runners (which may know about different checks). The server will schedule your checks in accordance to run frequency you specify in the runner code and runners will pick up these tasks, execute the appropriate checks and report back results.
+
+## Under the hood.
+
+Checker uses the [disque](http://antirez.com/news/88) job queue under the hood for communication between server and runners.
+
+### Availability
+
+As they come online, runners announce them using a `RUNNERJOIN` message in `checker:cluster` which contains information about what checks it knows about and a unique identifier. Runners also report if they're alive using the same queue using a `HEARTBEAT` message (along with the same uid). They also are listening to messages on the queue `checker:runner:<uid>`.
+
+Server process picks up new runners by listening to the `RUNNERJOIN` messages. Should the server have restarted or come online later than runners, then after receiving a `HEARTBEAT` it asks the runner to re-announce themselves using a `REANNOUNCE` message which will trigger another `RUNNERJOIN`.
+
+Should a runner not have announced itself in 1 minute it is counted as dead and it's checks are made unavailable unless any other runners can run the same checks.
+
+### Check running
+
+Each check has a project and a name that are to be unique. On a high level you can think of a project as a logical grouping of checks such that checks in the same project somehow belong together (similar goals). For optimal performance, it's important to
+
+In addition to the cluster queue, runners are listening for checks to run on `checker:project:<projectname>`. When runners have the capacity, they try to deque a check from one of the project queues they know about.
+
+In case the runner doesn't know how to deal with this check it issues a `NACK`, otherwise it `ACK`s the job. It then executes the job, reporting back the result using a `CHECKRESULT` message which includes if the check succeeded, runtime and relevant log information that was captured by the runner.
+
+### Scheduling checks
+
+Every tick, a process in the server checks if there are any checks that it knows about, is available and puts it in the appropriate job queue with a `time-to-live` of job timeout * 2.
+
+### Dealing with long-running jobs, timeouts
+
+:TODO:
+
+### Storing results
+
+:TODO:
